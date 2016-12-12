@@ -1,0 +1,180 @@
+apply plugin: 'java'
+import java.nio.file.Paths
+import java.io.File
+
+def grp = "assemble"
+def util = "util"
+
+
+//OVERRIDABLE IN SUPER SCRIPT
+
+//mainClass
+//jarName
+//relDir
+//libProjDir
+//deployedProjDir
+
+ext {
+	//println buildDir.getPath().toString()
+	//println libsDir.getPath().toString()
+	//println projectDir.getName()
+	//println jar.baseName
+	jarPaths = project.configurations.compile.collect { Paths.get( libsDir.getPath() ).relativize( Paths.get( it.getPath() ).toAbsolutePath() ).toString() }.join(';')
+	jarNames = project.configurations.compile.collect { it.getName() }.join(' ')
+	relFullPath = buildDir.getPath().toString() + "/" + ( project.findProperty('relDir') ?: "release" )
+	libProjPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'libProjDir' ) ?: "libs" )
+	deployedProjPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'deployedProjDir' ) ?: "deployed/Tools" )
+	deployedProjLibPath = deployedProjPath + "/" + ( project.findProperty( 'libProjDir' ) ?: "libs" )
+	jdocPath = buildDir.getPath().toString() + "/docs/javadoc"
+}
+
+
+sourceSets {
+	main {
+		java {
+			srcDirs = ['src']
+		}
+		resources {
+			srcDirs = ['src']
+			excludes = ["**/*.java"]
+		}
+	}
+}
+
+
+jar {
+	if ( project.findProperty('jarName') ) {
+		baseName = project.findProperty('jarName')
+	} 
+	if ( project.findProperty('mainClass') ) {
+		manifest {
+			attributes(
+				'Class-Path': project.findProperty('jarPaths') ?: "",
+				'Main-Class': project.findProperty('mainClass') ?: ""
+			)
+	 	}
+ 	}
+}
+
+
+
+
+//STANDARD=================================================================================
+task buildRelease( dependsOn: ['assemble', 'clean'] ) {
+	group = grp
+	tasks.findByName( 'assemble' ).mustRunAfter 'clean'
+	doLast {
+		delete relFullPath
+		copy { 
+			from ( libsDir.getPath().toString() )
+			into ( relFullPath )
+		}
+		copy {
+			from ( projectDir.getPath().toString() ) {
+				include 'LICENSE', 'README.md'
+			}
+			into( relFullPath )
+		}
+	}
+}
+
+task zipRelease( dependsOn: 'buildRelease' ) {
+	group = grp
+	finalizedBy 'zipRelDir'
+}
+//=================================================================================
+
+
+
+
+//WITH DOCS=================================================================================
+task buildReleaseWithDocs( dependsOn: ['buildRelease', 'javadoc'] ) {
+	group = grp
+	tasks.findByName( 'javadoc' ).mustRunAfter 'buildRelease'
+	finalizedBy 'zipJavaDocs'
+}
+
+task zipReleaseWithDocs( dependsOn: 'buildReleaseWithDocs' ) {
+	group = grp
+	finalizedBy 'zipRelDir'
+}
+//=================================================================================
+
+
+
+
+//WITH SOURCE=================================================================================
+task buildReleaseWithSource( dependsOn: 'buildRelease' ) {
+	group = grp
+	finalizedBy 'zipSource'
+}
+
+task zipReleaseWithSource( dependsOn: 'buildReleaseWithSource' ) {
+	group = grp
+	finalizedBy 'zipRelDir'
+}
+//=================================================================================
+
+
+
+
+//WITH SOURCE AND DOCS=================================================================================
+task buildReleaseFull( dependsOn: 'buildReleaseWithDocs' ) {
+	group = grp
+	finalizedBy 'zipSource'
+}
+
+task zipReleaseFull( dependsOn: 'buildReleaseFull' ) {
+	group = grp
+	finalizedBy 'zipRelDir'
+}
+//=================================================================================
+
+
+
+
+task buildLibJar( dependsOn: 'buildRelease' ) {
+	group = util
+	doLast {
+		copy {
+			from ( libsDir.getPath().toString() )
+			into ( libProjPath )
+		}
+	}
+}
+
+task buildDeployedLibJar( dependsOn: 'buildRelease' ) {
+	group = util
+	doLast {
+		copy {
+			from ( libsDir.getPath().toString() )
+			into ( deployedProjLibPath )
+		}
+	}
+}
+
+task zipJavaDocs( type: Zip, overwrite: true ) {
+	group = util
+	baseName = ( project.findProperty('jarName') ?: projectDir.getName() )
+	classifier = 'doc'
+	destinationDir = new File( relFullPath )
+	from jdocPath
+}
+
+task zipSource( type: Zip ) {
+	group = util
+	baseName = ( project.findProperty('jarName') ?: projectDir.getName() )
+	destinationDir = new File( relFullPath )
+    classifier = 'src'
+    from sourceSets*.allSource
+}
+
+
+task zipRelDir( type: Zip, overwrite:true ) {
+	group = util
+	baseName = ( project.findProperty('jarName') ?: projectDir.getName() )
+	destinationDir = new File( relFullPath )
+	from ( relFullPath ) {
+		exclude( "${baseName}.zip" )
+	}
+}
