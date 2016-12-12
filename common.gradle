@@ -164,8 +164,8 @@ task zipJavaDocs( type: Zip, overwrite: true ) {
 task zipSource( type: Zip ) {
 	group = util
 	baseName = ( project.findProperty('jarName') ?: projectDir.getName() )
+	classifier = 'src'
 	destinationDir = new File( relFullPath )
-    classifier = 'src'
     from sourceSets*.allSource
 }
 
