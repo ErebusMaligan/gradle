@@ -1,0 +1,28 @@
+apply from: '../gradle/common.gradle'  //this is relative to the project script calling it, not relative to this file itself
+
+def grp = '1' //this is just so tasks here show up at the top of the list when sorted alphabetically
+
+//builds everything for packaged release
+task buildAll( dependsOn: 'zipReleaseFull' ) {
+	group = grp
+	finalizedBy	'buildDeployedLibJar'
+	finalizedBy 'copyIcon'
+}
+
+//this one doesn't build the javadocs at all, or zip the source - mostly not building the javadocs saves a ton of time
+task buildQuick( dependsOn: 'buildRelease' ) {
+	group = grp
+	finalizedBy	'buildDeployedLibJar'
+	finalizedBy 'copyIcon'
+}
+
+task copyIcon << {
+	if ( project.findProperty( 'iconFile' ) ) {
+		copy {
+			from ( projectDir.getPath().toString() ) {
+				include 'MKV.ico'
+			}
+			into ( deployedProjPath + "/Apps/bat"  )
+		}
+	}
+}

@@ -8,24 +8,39 @@ def util = "util"
 
 //OVERRIDABLE IN SUPER SCRIPT
 
-//mainClass
-//jarName
-//relDir
-//libProjDir
-//deployedProjDir
+//relDir -- release directory where everything is assembled to -- defaults to <PROJECT>/build/release
+
+//jarName -- set to the name of the jar file <jarName>.jar -- defaults to <PROJECT NAME>
+//mainClass -- set main class qualified name for jar manifest -- defaults to null.  if null, unused and jar is assumed to be not executable
+
+//libProjDir -- project path for the common library project if used this path is used as: <PROJECT ROOT>/../<libProjDir> -- defaults to libs
+
+//deployedProjDir -- Relative to project this path is: <PROJECT ROOT>/../<deployedProjDir> -- defaults to deployed/Tools
+//deployedLibDir -- Relative to deployedProjDir
+
+//copyLibs -- set to true if used -- defaults to false
+//libDest -- place to copy dependency jars -- defaults to /build/release/libs - always relative to project root
+
+//jarPathPrefix -- 
 
 ext {
-	//println buildDir.getPath().toString()
-	//println libsDir.getPath().toString()
-	//println projectDir.getName()
-	//println jar.baseName
-	jarPaths = project.configurations.compile.collect { Paths.get( libsDir.getPath() ).relativize( Paths.get( it.getPath() ).toAbsolutePath() ).toString() }.join(';')
+	dependencyJars = project.configurations.compile.collect { Paths.get( it.getPath() ).toAbsolutePath().toString() }.join(',')
+	
+	jarPaths = project.findProperty( 'jarPathPrefix' ) ? 
+		project.configurations.compile.collect { project.getProperty( 'jarPathPrefix' ) + it.getName() }.join(' ') :
+		project.configurations.compile.collect { Paths.get( libsDir.getPath() ).relativize( Paths.get( it.getPath() ).toAbsolutePath() ).toString() }.join(';')
+	
 	jarNames = project.configurations.compile.collect { it.getName() }.join(' ')
-	relFullPath = buildDir.getPath().toString() + "/" + ( project.findProperty('relDir') ?: "release" )
-	libProjPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'libProjDir' ) ?: "libs" )
-	deployedProjPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'deployedProjDir' ) ?: "deployed/Tools" )
-	deployedProjLibPath = deployedProjPath + "/" + ( project.findProperty( 'libProjDir' ) ?: "libs" )
+	
+	relFullPath = ( project.findProperty('relDir') ?: ( buildDir.getPath().toString() + "/" + "release" ) )
 	jdocPath = buildDir.getPath().toString() + "/docs/javadoc"
+	
+	libProjPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'libProjDir' ) ?: "libs" )
+	
+	deployedProjPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'deployedProjDir' ) ?: "deployed/Tools" )
+	deployedProjLibPath = deployedProjPath + "/" + ( project.findProperty( 'deployedLibDir' ) ?: ( project.findProperty( 'libProjDir' ) ?: "libs" ) )
+	
+	relLibPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'libDest' ) ?: ( buildDir.getPath().toString() + "/" + ( project.findProperty('relDir') ?: "release/libs" ) ) )
 }
 
 
@@ -75,6 +90,9 @@ task buildRelease( dependsOn: ['assemble', 'clean'] ) {
 			}
 			into( relFullPath )
 		}
+	}
+	if ( project.findProperty( 'copyLibs' ) ) {
+		finalizedBy 'copyLibs'
 	}
 }
 
@@ -176,5 +194,15 @@ task zipRelDir( type: Zip, overwrite:true ) {
 	destinationDir = new File( relFullPath )
 	from ( relFullPath ) {
 		exclude( "${baseName}.zip" )
+	}
+}
+
+task copyLibs() {
+	group = util
+	doLast {
+		copy {
+			from ( dependencyJars.split( "," ) )
+			into ( relLibPath )
+		}
 	}
 }
