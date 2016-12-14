@@ -1,0 +1,2 @@
+includeFlat 'docs', 'ext', 'StandardPlugins'
+This use to be various lines that looked like: project(':ext').projectDir = new File (settingsDir, '../ext')
