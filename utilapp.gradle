@@ -16,13 +16,15 @@ task buildQuick( dependsOn: 'buildRelease' ) {
 	finalizedBy 'copyIcon'
 }
 
-task copyIcon << {
-	if ( project.findProperty( 'iconFile' ) ) {
-		copy {
-			from ( projectDir.getPath().toString() ) {
-				include 'MKV.ico'
+task copyIcon {
+	doLast {
+		if ( project.findProperty( 'iconFile' ) ) {
+			copy {
+				from ( projectDir.getPath().toString() ) {
+					include 'MKV.ico'
+				}
+				into ( deployedProjPath + "/Apps/bat"  )
 			}
-			into ( deployedProjPath + "/Apps/bat"  )
 		}
 	}
 }
