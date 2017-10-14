@@ -21,7 +21,7 @@ task copyIcon {
 		if ( project.findProperty( 'iconFile' ) ) {
 			copy {
 				from ( projectDir.getPath().toString() ) {
-					include 'MKV.ico'
+					include project.findProperty( 'iconFile' )
 				}
 				into ( deployedProjPath + "/Apps/bat"  )
 			}
