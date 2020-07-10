@@ -1,0 +1,5 @@
+To use JUnit in eclipse but not be included for run-time, include the following block in build.gradle
+
+dependencies {
+    compile fileTree(dir: '../gradle/resources/JUnit', include: '*.jar')
+}
