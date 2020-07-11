@@ -171,13 +171,14 @@ task buildDeployedLibJar( dependsOn: 'buildRelease' ) {
 	}
 }
 
-task zipJavaDocs( type: Zip, overwrite: true ) {
+task zipJavaDocs( type: Zip ) {
 	group = util
 	baseName = ( project.findProperty('jarName') ?: projectDir.getName() )
 	classifier = 'doc'
 	destinationDir = new File( relFullPath )
 	from jdocPath
 }
+
 
 task zipSource( type: Zip ) {
 	group = util
@@ -188,7 +189,7 @@ task zipSource( type: Zip ) {
 }
 
 
-task zipRelDir( type: Zip, overwrite:true ) {
+task zipRelDir( type: Zip ) {
 	group = util
 	baseName = ( project.findProperty('jarName') ?: projectDir.getName() )
 	destinationDir = new File( relFullPath )
