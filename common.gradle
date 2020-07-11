@@ -32,15 +32,23 @@ ext {
 	
 	jarNames = project.configurations.compile.collect { it.getName() }.join(' ')
 	
+	
+	
 	relFullPath = ( project.findProperty('relDir') ?: ( buildDir.getPath().toString() + "/" + "release" ) )
 	jdocPath = buildDir.getPath().toString() + "/docs/javadoc"
 	
+	deployedProjPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'deployedProjDir' ) ?: "deployed/Tools" )
 	libProjPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'libProjDir' ) ?: "libs" )
 	
-	deployedProjPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'deployedProjDir' ) ?: "deployed/Tools" )
 	deployedProjLibPath = deployedProjPath + "/" + ( project.findProperty( 'deployedLibDir' ) ?: ( project.findProperty( 'libProjDir' ) ?: "libs" ) )
 	
-	relLibPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'libDest' ) ?: ( buildDir.getPath().toString() + "/" + ( project.findProperty('relDir') ?: "release/libs" ) ) )
+	if ( project.findProperty( 'libDest' ) != null ) {
+		relLibPath = projectDir.getPath().toString() + "/../" + project.findProperty( 'libDest' )                                              
+	} else {
+		relLibPath = buildDir.getPath().toString() + "/" + ( project.findProperty('relDir') ?: "release/libs" )     
+	}
+
+	/*relLibPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'libDest' ) ?: ( buildDir.getPath().toString() + "/" + ( project.findProperty('relDir') ?: "release/libs" ) ) )*/
 }
 
 
@@ -166,7 +174,7 @@ task buildDeployedLibJar( dependsOn: 'buildRelease' ) {
 	doLast {
 		copy {
 			from ( libsDir.getPath().toString() )
-			into ( deployedProjLibPath )
+			into ( deployedProjPath )
 		}
 	}
 }
@@ -204,6 +212,10 @@ task copyLibs() {
 		copy {
 			from ( dependencyJars.split( "," ) )
 			into ( relLibPath )
+		}
+		copy {
+			from ( dependencyJars.split( "," ) )
+			into ( deployedProjLibPath )
 		}
 	}
 }
