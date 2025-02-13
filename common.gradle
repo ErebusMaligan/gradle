@@ -32,23 +32,15 @@ ext {
 	
 	jarNames = project.configurations.compile.collect { it.getName() }.join(' ')
 	
-	
-	
 	relFullPath = ( project.findProperty('relDir') ?: ( buildDir.getPath().toString() + "/" + "release" ) )
 	jdocPath = buildDir.getPath().toString() + "/docs/javadoc"
 	
-	deployedProjPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'deployedProjDir' ) ?: "deployed/Tools" )
 	libProjPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'libProjDir' ) ?: "libs" )
 	
+	deployedProjPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'deployedProjDir' ) ?: "deployed/Tools" )
 	deployedProjLibPath = deployedProjPath + "/" + ( project.findProperty( 'deployedLibDir' ) ?: ( project.findProperty( 'libProjDir' ) ?: "libs" ) )
 	
-	if ( project.findProperty( 'libDest' ) != null ) {
-		relLibPath = projectDir.getPath().toString() + "/../" + project.findProperty( 'libDest' )                                              
-	} else {
-		relLibPath = buildDir.getPath().toString() + "/" + ( project.findProperty('relDir') ?: "release/libs" )     
-	}
-
-	/*relLibPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'libDest' ) ?: ( buildDir.getPath().toString() + "/" + ( project.findProperty('relDir') ?: "release/libs" ) ) )*/
+	relLibPath = projectDir.getPath().toString() + "/../" + ( project.findProperty( 'libDest' ) ?: ( buildDir.getPath().toString() + "/" + ( project.findProperty('relDir') ?: "release/libs" ) ) )
 }
 
 
@@ -97,6 +89,12 @@ task buildRelease( dependsOn: ['assemble', 'clean'] ) {
 				include 'LICENSE', 'README.md'
 			}
 			into( relFullPath )
+		}
+		if ( project.findProperty( 'includeLibs' ) ) {
+			copy {
+				from ( dependencyJars.split( "," ) )
+				into ( relFullPath + "/" + jarPathPrefix )
+			}
 		}
 	}
 	if ( project.findProperty( 'copyLibs' ) ) {
@@ -174,19 +172,18 @@ task buildDeployedLibJar( dependsOn: 'buildRelease' ) {
 	doLast {
 		copy {
 			from ( libsDir.getPath().toString() )
-			into ( deployedProjPath )
+			into ( deployedProjLibPath )
 		}
 	}
 }
 
-task zipJavaDocs( type: Zip ) {
+task zipJavaDocs( type: Zip, overwrite: true ) {
 	group = util
 	baseName = ( project.findProperty('jarName') ?: projectDir.getName() )
 	classifier = 'doc'
 	destinationDir = new File( relFullPath )
 	from jdocPath
 }
-
 
 task zipSource( type: Zip ) {
 	group = util
@@ -197,7 +194,7 @@ task zipSource( type: Zip ) {
 }
 
 
-task zipRelDir( type: Zip ) {
+task zipRelDir( type: Zip, overwrite:true ) {
 	group = util
 	baseName = ( project.findProperty('jarName') ?: projectDir.getName() )
 	destinationDir = new File( relFullPath )
@@ -212,10 +209,6 @@ task copyLibs() {
 		copy {
 			from ( dependencyJars.split( "," ) )
 			into ( relLibPath )
-		}
-		copy {
-			from ( dependencyJars.split( "," ) )
-			into ( deployedProjLibPath )
 		}
 	}
 }
