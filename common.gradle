@@ -90,7 +90,7 @@ task buildRelease( dependsOn: ['assemble', 'clean'] ) {
 			}
 			into( relFullPath )
 		}
-		if ( project.findProperty( 'includeLibs' ) ) {
+		if ( project.findProperty( 'includeLibs' ) && !dependencyJars.isEmpty() ) {
 			copy {
 				from ( dependencyJars.split( "," ) )
 				into ( relFullPath + "/" + jarPathPrefix )
@@ -206,9 +206,11 @@ task zipRelDir( type: Zip, overwrite:true ) {
 task copyLibs() {
 	group = util
 	doLast {
-		copy {
-			from ( dependencyJars.split( "," ) )
-			into ( relLibPath )
+		if ( !dependencyJars.isEmpty() ) {
+			copy {
+				from ( dependencyJars.split( "," ) )
+				into ( relLibPath )
+			}
 		}
 	}
 }
