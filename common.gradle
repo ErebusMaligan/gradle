@@ -91,7 +91,7 @@ task buildRelease( dependsOn: ['assemble', 'clean'] ) {
 		}
 		copy {
 			from ( projectDir.getPath().toString() ) {
-				include 'LICENSE', 'README.md'
+				include 'LICENSE', 'README.md', '*.bat'
 			}
 			into( relFullPath )
 		}
