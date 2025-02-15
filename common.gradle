@@ -24,13 +24,18 @@ def util = "util"
 //jarPathPrefix -- 
 
 ext {
-	dependencyJars = project.configurations.compile.collect { Paths.get( it.getPath() ).toAbsolutePath().toString() }.join(',')
+	tasks.withType(Zip).all { duplicatesStrategy 'exclude' }
+	configurations.implementation.canBeResolved = true
+
+	println( project.findProperty('jarName') ?: projectDir.getName() )
+
+	dependencyJars = project.configurations.implementation.collect { Paths.get( it.getPath() ).toAbsolutePath().toString() }.join(',')
 	
 	jarPaths = project.findProperty( 'jarPathPrefix' ) ? 
-		project.configurations.compile.collect { project.getProperty( 'jarPathPrefix' ) + it.getName() }.join(' ') :
-		project.configurations.compile.collect { Paths.get( libsDir.getPath() ).relativize( Paths.get( it.getPath() ).toAbsolutePath() ).toString() }.join(';')
+		project.configurations.implementation.collect { project.getProperty( 'jarPathPrefix' ) + it.getName() }.join(' ') :
+		project.configurations.implementation.collect { Paths.get( project.libsDirName ).relativize( Paths.get( it.getPath() ).toAbsolutePath() ).toString() }.join(';')
 	
-	jarNames = project.configurations.compile.collect { it.getName() }.join(' ')
+	jarNames = project.configurations.implementation.collect { it.getName() }.join(' ')
 	
 	relFullPath = ( project.findProperty('relDir') ?: ( buildDir.getPath().toString() + "/" + "release" ) )
 	jdocPath = buildDir.getPath().toString() + "/docs/javadoc"
@@ -59,7 +64,7 @@ sourceSets {
 
 jar {
 	if ( project.findProperty('jarName') ) {
-		baseName = project.findProperty('jarName')
+		archiveBaseName = project.findProperty('jarName')
 	} 
 	if ( project.findProperty('mainClass') ) {
 		manifest {
@@ -80,8 +85,8 @@ task buildRelease( dependsOn: ['assemble', 'clean'] ) {
 	tasks.findByName( 'assemble' ).mustRunAfter 'clean'
 	doLast {
 		delete relFullPath
-		copy { 
-			from ( libsDir.getPath().toString() )
+		copy {
+			from ( Paths.get( buildDir.getPath().toString() + "/" + project.relativePath( libsDirName ).toString() ) )
 			into ( relFullPath )
 		}
 		copy {
@@ -161,7 +166,7 @@ task buildLibJar( dependsOn: 'buildRelease' ) {
 	group = util
 	doLast {
 		copy {
-			from ( libsDir.getPath().toString() )
+			from ( Paths.get( buildDir.getPath().toString() + "/" + project.relativePath( libsDirName ).toString() ) )
 			into ( libProjPath )
 		}
 	}
@@ -171,36 +176,38 @@ task buildDeployedLibJar( dependsOn: 'buildRelease' ) {
 	group = util
 	doLast {
 		copy {
-			from ( libsDir.getPath().toString() )
+			from ( Paths.get( buildDir.getPath().toString() + "/" + project.relativePath( libsDirName ).toString() ) )
 			into ( deployedProjLibPath )
 		}
 	}
 }
 
-task zipJavaDocs( type: Zip, overwrite: true ) {
+task zipJavaDocs( type: Zip ) {
 	group = util
-	baseName = ( project.findProperty('jarName') ?: projectDir.getName() )
-	classifier = 'doc'
-	destinationDir = new File( relFullPath )
+	archiveBaseName = ( project.findProperty('jarName') ?: projectDir.getName() )
+	archiveClassifier = 'doc'
+	destinationDirectory = new File( relFullPath )
 	from jdocPath
 }
 
 task zipSource( type: Zip ) {
 	group = util
-	baseName = ( project.findProperty('jarName') ?: projectDir.getName() )
-	classifier = 'src'
-	destinationDir = new File( relFullPath )
+	archiveBaseName = ( project.findProperty('jarName') ?: projectDir.getName() )
+	archiveClassifier = 'src'
+	destinationDirectory = new File( relFullPath )
     from sourceSets*.allSource
 }
 
 
-task zipRelDir( type: Zip, overwrite:true ) {
+task zipRelDir( type: Zip ) {
 	group = util
-	baseName = ( project.findProperty('jarName') ?: projectDir.getName() )
-	destinationDir = new File( relFullPath )
+	archiveBaseName = ( project.findProperty('jarName') ?: projectDir.getName() )
+	destinationDirectory = new File( relFullPath )
 	from ( relFullPath ) {
-		exclude( "${baseName}.zip" )
+		exclude( ( project.findProperty('jarName') ?: projectDir.getName() ) + ".zip" )
 	}
+	mustRunAfter( zipSource )
+	mustRunAfter( zipJavaDocs )
 }
 
 task copyLibs() {
